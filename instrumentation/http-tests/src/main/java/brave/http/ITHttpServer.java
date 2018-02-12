@@ -216,6 +216,11 @@ public abstract class ITHttpServer extends ITHttp {
         .containsEntry("context.visible", "true");
   }
 
+  /**
+   * The "/items/{itemId}" endpoint should return the itemId in the response body, which proves
+   * templating worked (including that it ignores query parameters). Note the template format is
+   * framework specific, ex "/items/:itemId" in vert.x
+   */
   @Test
   public void supportsHttpTemplate() throws Exception {
     httpTracing = httpTracing.toBuilder().serverParser(new HttpServerParser() {
@@ -234,6 +239,7 @@ public abstract class ITHttpServer extends ITHttp {
     }).build();
     init();
 
+    // Reading the template parameter from the response ensures the test endpoint is correct
     assertThat(get("/items/1?foo").body().string())
         .isEqualTo("1");
     assertThat(get("/items/2?bar").body().string())
@@ -249,8 +255,9 @@ public abstract class ITHttpServer extends ITHttp {
         .containsEntry("http.path", "/items/2")
         .containsEntry("http.url", url("/items/2?bar"));
 
+    // We don't know the exact format of the http template as it is framework specific
+    // However, we know that it should match both requests and include the common part of the path
     Set<String> templates = new LinkedHashSet<>(Arrays.asList(span1.name(), span2.name()));
-
     assertThat(templates).hasSize(1);
     assertThat(templates.iterator().next())
         .contains("items");
