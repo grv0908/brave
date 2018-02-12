@@ -3,6 +3,9 @@ package brave.http;
 import brave.SpanCustomizer;
 import brave.propagation.ExtraFieldPropagation;
 import brave.sampler.Sampler;
+import java.util.Arrays;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -211,6 +214,46 @@ public abstract class ITHttpServer extends ITHttp {
     assertThat(span.tags())
         .containsEntry("http.url", url(uri))
         .containsEntry("context.visible", "true");
+  }
+
+  @Test
+  public void supportsHttpTemplate() throws Exception {
+    httpTracing = httpTracing.toBuilder().serverParser(new HttpServerParser() {
+      @Override
+      public <Req> void request(HttpAdapter<Req, ?> adapter, Req req, SpanCustomizer customizer) {
+        super.request(adapter, req, customizer);
+        customizer.tag("http.url", adapter.url(req)); // just the path is logged by default
+      }
+
+      @Override public <Resp> void response(HttpAdapter<?, Resp> adapter, Resp res, Throwable error,
+          SpanCustomizer customizer) {
+        super.response(adapter, res, error, customizer);
+        String template = adapter.template(res);
+        if (template != null) customizer.name(template);
+      }
+    }).build();
+    init();
+
+    assertThat(get("/items/1?foo").body().string())
+        .isEqualTo("1");
+    assertThat(get("/items/2?bar").body().string())
+        .isEqualTo("2");
+
+    Span span1 = takeSpan(), span2 = takeSpan();
+
+    // verify that the path and url reflect the initial request (not a route expression)
+    assertThat(span1.tags())
+        .containsEntry("http.path", "/items/1")
+        .containsEntry("http.url", url("/items/1?foo"));
+    assertThat(span2.tags())
+        .containsEntry("http.path", "/items/2")
+        .containsEntry("http.url", url("/items/2?bar"));
+
+    Set<String> templates = new LinkedHashSet<>(Arrays.asList(span1.name(), span2.name()));
+
+    assertThat(templates).hasSize(1);
+    assertThat(templates.iterator().next())
+        .contains("items");
   }
 
   @Test

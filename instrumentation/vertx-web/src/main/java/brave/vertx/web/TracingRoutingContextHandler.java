@@ -36,12 +36,14 @@ final class TracingRoutingContextHandler implements Handler<RoutingContext> {
   };
 
   final Tracer tracer;
+  final ThreadLocal<String> currentTemplate;
   final HttpServerHandler<HttpServerRequest, HttpServerResponse> serverHandler;
   final TraceContext.Extractor<HttpServerRequest> extractor;
 
   TracingRoutingContextHandler(HttpTracing httpTracing) {
     tracer = httpTracing.tracing().tracer();
-    serverHandler = HttpServerHandler.create(httpTracing, new Adapter());
+    currentTemplate = new ThreadLocal<>();
+    serverHandler = HttpServerHandler.create(httpTracing, new Adapter(currentTemplate));
     extractor = httpTracing.tracing().propagation().extractor(GETTER);
   }
 
@@ -80,11 +82,27 @@ final class TracingRoutingContextHandler implements Handler<RoutingContext> {
 
     @Override public void handle(Void aVoid) {
       if (!context.request().isEnded()) return;
-      serverHandler.handleSend(context.response(), context.failure(), span);
+      String template = context.currentRoute().getPath();
+      if (template == null) { // skip thread-local overhead if there's no attribute
+        serverHandler.handleSend(context.response(), context.failure(), span);
+        return;
+      }
+      try {
+        currentTemplate.set(template);
+        serverHandler.handleSend(context.response(), context.failure(), span);
+      } finally {
+        currentTemplate.remove();
+      }
     }
   }
 
   static final class Adapter extends HttpServerAdapter<HttpServerRequest, HttpServerResponse> {
+    final ThreadLocal<String> currentTemplate;
+
+    Adapter(ThreadLocal<String> currentTemplate) {
+      this.currentTemplate = currentTemplate;
+    }
+
     @Override public String method(HttpServerRequest request) {
       return request.method().name();
     }
@@ -99,6 +117,10 @@ final class TracingRoutingContextHandler implements Handler<RoutingContext> {
 
     @Override public String requestHeader(HttpServerRequest request, String name) {
       return request.headers().get(name);
+    }
+
+    @Override public String template(HttpServerResponse response) {
+      return currentTemplate.get();
     }
 
     @Override public Integer statusCode(HttpServerResponse response) {

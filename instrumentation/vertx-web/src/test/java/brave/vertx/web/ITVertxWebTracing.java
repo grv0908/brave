@@ -55,6 +55,9 @@ public class ITVertxWebTracing extends ITHttpServer {
     router.route("/exception").handler(ctx -> {
       ctx.fail(new Exception());
     });
+    router.route("/items/:itemId").handler(ctx -> {
+      ctx.response().end(ctx.request().getParam("itemId"));
+    });
     router.route("/exceptionAsync").handler(ctx -> {
       ctx.request().endHandler(v -> ctx.fail(new Exception()));
     });

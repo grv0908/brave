@@ -17,6 +17,9 @@ import org.springframework.web.servlet.ModelAndView;
 
 /** Tracing interceptor for Spring Web MVC {@link HandlerInterceptor}. */
 public final class TracingHandlerInterceptor implements HandlerInterceptor {
+  // redefined from HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE as doesn't exist until Spring 3
+  static final String BEST_MATCHING_PATTERN_ATTRIBUTE =
+      "org.springframework.web.servlet.HandlerMapping.bestMatchingPattern";
   static final Propagation.Getter<HttpServletRequest, String> GETTER =
       new Propagation.Getter<HttpServletRequest, String>() {
         @Override public String get(HttpServletRequest carrier, String key) {
@@ -37,12 +40,23 @@ public final class TracingHandlerInterceptor implements HandlerInterceptor {
   }
 
   final Tracer tracer;
+  final ThreadLocal<Object> currentTemplate;
   final HttpServerHandler<HttpServletRequest, HttpServletResponse> handler;
   final TraceContext.Extractor<HttpServletRequest> extractor;
 
   @Autowired TracingHandlerInterceptor(HttpTracing httpTracing) { // internal
     tracer = httpTracing.tracing().tracer();
-    handler = HttpServerHandler.create(httpTracing, new HttpServletAdapter());
+    currentTemplate = new ThreadLocal<>();
+    handler = HttpServerHandler.create(httpTracing, new HttpServletAdapter() {
+      @Override public String template(HttpServletResponse response) {
+        Object result = currentTemplate.get();
+        return result != null ? result.toString() : null;
+      }
+
+      @Override public String toString() {
+        return "WebMVCAdapter{}";
+      }
+    });
     extractor = httpTracing.tracing().propagation().extractor(GETTER);
   }
 
@@ -59,7 +73,7 @@ public final class TracingHandlerInterceptor implements HandlerInterceptor {
 
   @Override
   public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler,
-      ModelAndView modelAndView) throws Exception {
+      ModelAndView modelAndView) {
   }
 
   @Override
@@ -68,6 +82,16 @@ public final class TracingHandlerInterceptor implements HandlerInterceptor {
     Span span = tracer.currentSpan();
     if (span == null) return;
     ((SpanInScope) request.getAttribute(SpanInScope.class.getName())).close();
-    handler.handleSend(response, ex, span);
+    Object template = request.getAttribute(BEST_MATCHING_PATTERN_ATTRIBUTE);
+    if (template == null) { // skip thread-local overhead if there's no attribute
+      handler.handleSend(response, ex, span);
+      return;
+    }
+    try {
+      currentTemplate.set(template);
+      handler.handleSend(response, ex, span);
+    } finally {
+      currentTemplate.remove();
+    }
   }
 }

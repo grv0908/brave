@@ -15,6 +15,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
 import org.springframework.web.servlet.DispatcherServlet;
@@ -33,17 +34,17 @@ public class ITTracingHandlerInterceptor extends ITServletContainer {
     }
 
     @RequestMapping(value = "/foo")
-    public ResponseEntity<Void> foo() throws IOException {
+    public ResponseEntity<Void> foo() {
       return new ResponseEntity<>(HttpStatus.OK);
     }
 
     @RequestMapping(value = "/extra")
-    public ResponseEntity<String> extra() throws IOException {
+    public ResponseEntity<String> extra() {
       return new ResponseEntity<>(ExtraFieldPropagation.get(EXTRA_KEY), HttpStatus.OK);
     }
 
     @RequestMapping(value = "/badrequest")
-    public ResponseEntity<Void> badrequest() throws IOException {
+    public ResponseEntity<Void> badrequest() {
       return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
     }
 
@@ -54,7 +55,7 @@ public class ITTracingHandlerInterceptor extends ITServletContainer {
     }
 
     @RequestMapping(value = "/async")
-    public Callable<ResponseEntity<Void>> async() throws IOException {
+    public Callable<ResponseEntity<Void>> async() {
       return () -> new ResponseEntity<>(HttpStatus.OK);
     }
 
@@ -64,10 +65,15 @@ public class ITTracingHandlerInterceptor extends ITServletContainer {
     }
 
     @RequestMapping(value = "/exceptionAsync")
-    public Callable<ResponseEntity<Void>> disconnectAsync() throws IOException {
+    public Callable<ResponseEntity<Void>> disconnectAsync() {
       return () -> {
         throw new IOException();
       };
+    }
+
+    @RequestMapping(value = "/items/{itemId}")
+    public ResponseEntity<String> items(@PathVariable String itemId) {
+      return new ResponseEntity<String>(itemId, HttpStatus.OK);
     }
   }
 

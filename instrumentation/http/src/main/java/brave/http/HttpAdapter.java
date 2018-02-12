@@ -38,6 +38,26 @@ public abstract class HttpAdapter<Req, Resp> {
   @Nullable public abstract String requestHeader(Req request, String name);
 
   /**
+   * An expression representing an application endpoint, used to group similar requests together.
+   *
+   * <p>For example, the template "/products/{key}", would match "/products/1" and "/products/2".
+   * There is no format required for the encoding, as it is sometimes application defined. The
+   * important part is that the value namespace is low cardinality.
+   *
+   * <p>Conventionally associated with the key "http.template"
+   *
+   * <p>Eventhough the template is associated with the request, not the response, this is present
+   * on the response object. The reasons is that many server implementations process the request
+   * before they can identify the route route.
+   */
+  // BRAVE5: It isn't possible for a user to easily consume HttpServerAdapter, which is why this
+  // method, while generally about the server, is pushed up to the HttpAdapter. The signatures for
+  // sampling and parsing could be changed to make it more convenient.
+  @Nullable public String template(Resp response) {
+    return null;
+  }
+
+  /**
    * The HTTP status code or null if unreadable.
    *
    * <p>Conventionally associated with the key "http.status_code"

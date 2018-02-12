@@ -22,21 +22,20 @@ public final class TracingAsyncHandlerInterceptor extends HandlerInterceptorAdap
     return new TracingAsyncHandlerInterceptor(httpTracing);
   }
 
-  final HandlerInterceptor delegate;
+  final TracingHandlerInterceptor delegate;
 
   @Autowired TracingAsyncHandlerInterceptor(HttpTracing httpTracing) { // internal
-    delegate = TracingHandlerInterceptor.create(httpTracing);
+    delegate = new TracingHandlerInterceptor(httpTracing);
   }
 
   @Override
-  public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object o)
-      throws Exception {
+  public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object o) {
     return delegate.preHandle(request, response, o);
   }
 
   @Override
-  public void afterCompletion(HttpServletRequest request, HttpServletResponse response,
-      Object o, Exception ex) throws Exception {
+  public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object o,
+      Exception ex) {
     delegate.afterCompletion(request, response, o, ex);
   }
 }

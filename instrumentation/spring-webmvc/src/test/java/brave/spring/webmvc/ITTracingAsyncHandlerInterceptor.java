@@ -15,6 +15,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
 import org.springframework.web.servlet.AsyncHandlerInterceptor;
@@ -68,6 +69,11 @@ public class ITTracingAsyncHandlerInterceptor extends ITServletContainer {
       return () -> {
         throw new IOException();
       };
+    }
+
+    @RequestMapping(value = "/items/{itemId}")
+    public ResponseEntity<Void> items(@PathVariable String itemId) throws IOException {
+      return new ResponseEntity<>(HttpStatus.OK);
     }
   }
 
