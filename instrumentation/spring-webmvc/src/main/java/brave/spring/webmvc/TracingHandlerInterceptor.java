@@ -11,6 +11,7 @@ import brave.propagation.TraceContext;
 import brave.servlet.HttpServletAdapter;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpServletResponseWrapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.ModelAndView;
@@ -40,17 +41,15 @@ public final class TracingHandlerInterceptor implements HandlerInterceptor {
   }
 
   final Tracer tracer;
-  final ThreadLocal<Object> currentTemplate;
   final HttpServerHandler<HttpServletRequest, HttpServletResponse> handler;
   final TraceContext.Extractor<HttpServletRequest> extractor;
 
   @Autowired TracingHandlerInterceptor(HttpTracing httpTracing) { // internal
     tracer = httpTracing.tracing().tracer();
-    currentTemplate = new ThreadLocal<>();
     handler = HttpServerHandler.create(httpTracing, new HttpServletAdapter() {
       @Override public String template(HttpServletResponse response) {
-        Object result = currentTemplate.get();
-        return result != null ? result.toString() : null;
+        return response instanceof HttpServletResponseWithTemplate
+            ? ((HttpServletResponseWithTemplate) response).template : null;
       }
 
       @Override public String toString() {
@@ -83,15 +82,18 @@ public final class TracingHandlerInterceptor implements HandlerInterceptor {
     if (span == null) return;
     ((SpanInScope) request.getAttribute(SpanInScope.class.getName())).close();
     Object template = request.getAttribute(BEST_MATCHING_PATTERN_ATTRIBUTE);
-    if (template == null) { // skip thread-local overhead if there's no attribute
-      handler.handleSend(response, ex, span);
-      return;
+    if (template != null) {
+      response = new HttpServletResponseWithTemplate(response, template.toString());
     }
-    try {
-      currentTemplate.set(template);
-      handler.handleSend(response, ex, span);
-    } finally {
-      currentTemplate.remove();
+    handler.handleSend(response, ex, span);
+  }
+
+  static class HttpServletResponseWithTemplate extends HttpServletResponseWrapper {
+    final String template;
+
+    HttpServletResponseWithTemplate(HttpServletResponse response, String template) {
+      super(response);
+      this.template = template;
     }
   }
 }
