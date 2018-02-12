@@ -72,8 +72,8 @@ public class ITTracingAsyncHandlerInterceptor extends ITServletContainer {
     }
 
     @RequestMapping(value = "/items/{itemId}")
-    public ResponseEntity<Void> items(@PathVariable String itemId) throws IOException {
-      return new ResponseEntity<>(HttpStatus.OK);
+    public ResponseEntity<String> items(@PathVariable String itemId) {
+      return new ResponseEntity<>(itemId, HttpStatus.OK);
     }
   }
 

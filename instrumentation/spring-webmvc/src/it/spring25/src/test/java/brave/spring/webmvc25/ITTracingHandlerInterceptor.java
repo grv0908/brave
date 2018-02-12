@@ -8,6 +8,7 @@ import java.io.IOException;
 import javax.servlet.http.HttpServletResponse;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
+import org.junit.Ignore;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -22,6 +23,10 @@ import static org.springframework.web.servlet.DispatcherServlet.HANDLER_ADAPTER_
 import static org.springframework.web.servlet.DispatcherServlet.HANDLER_MAPPING_BEAN_NAME;
 
 public class ITTracingHandlerInterceptor extends ITServletContainer {
+
+  @Override @Ignore("HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE doesn't exist until Spring 3")
+  public void supportsHttpTemplate() {
+  }
 
   @Controller
   public static class TestController {
