@@ -38,22 +38,28 @@ public abstract class HttpAdapter<Req, Resp> {
   @Nullable public abstract String requestHeader(Req request, String name);
 
   /**
-   * An expression representing an application endpoint, used to group similar requests together.
+   * An expression such as "/items/:itemId" representing an application endpoint, conventionally
+   * associated with the tag key "http.route".
    *
-   * <p>For example, the template "/products/{key}", would match "/products/1" and "/products/2".
-   * There is no format required for the encoding, as it is sometimes application defined. The
-   * important part is that the value namespace is low cardinality.
+   * <p>The http route groups similar requests together, so results in limited cardinality, often
+   * better choice for a span name vs the http method. However, the route can be absent on redirect
+   * or file-not-found. Also, not all frameworks include support for http route expressions,
+   * and some don't expose templates programmatically for readback.
    *
-   * <p>Conventionally associated with the key "http.template"
+   * <p>For example, the route "/users/{userId}", matches "/users/25f4c31d" and "/users/e3c553be".
+   * If a span name function used the http path instead, it could DOS-style attack vector on your
+   * span name index, as it would grow unbounded vs "/users/{userId}". Even if different frameworks
+   * use different formats, like "/users/[0-9a-f]+" or "/users/:userId", the cardinality is still
+   * fixed with regards to request count.
    *
-   * <p>Eventhough the template is associated with the request, not the response, this is present
+   * <p>Eventhough the route is associated with the request, not the response, this is present
    * on the response object. The reasons is that many server implementations process the request
    * before they can identify the route route.
    */
   // BRAVE5: It isn't possible for a user to easily consume HttpServerAdapter, which is why this
   // method, while generally about the server, is pushed up to the HttpAdapter. The signatures for
   // sampling and parsing could be changed to make it more convenient.
-  @Nullable public String template(Resp response) {
+  @Nullable public String route(Resp response) {
     return null;
   }
 

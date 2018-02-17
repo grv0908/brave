@@ -38,8 +38,8 @@ public final class ContainerAdapter
     return request.getHeaderString(name);
   }
 
-  @Override public String template(ContainerResponseContext response) {
-    // There's no portable means to get the template eventhough there is a way in jersey2
+  @Override public String route(ContainerResponseContext response) {
+    // There's no portable means to get the route eventhough there is a way in jersey2
     return null;
   }
 

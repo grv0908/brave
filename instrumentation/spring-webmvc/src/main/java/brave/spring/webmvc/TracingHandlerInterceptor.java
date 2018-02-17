@@ -47,7 +47,7 @@ public final class TracingHandlerInterceptor implements HandlerInterceptor {
   @Autowired TracingHandlerInterceptor(HttpTracing httpTracing) { // internal
     tracer = httpTracing.tracing().tracer();
     handler = HttpServerHandler.create(httpTracing, new HttpServletAdapter() {
-      @Override public String template(HttpServletResponse response) {
+      @Override public String route(HttpServletResponse response) {
         return response instanceof HttpServletResponseWithTemplate
             ? ((HttpServletResponseWithTemplate) response).template : null;
       }

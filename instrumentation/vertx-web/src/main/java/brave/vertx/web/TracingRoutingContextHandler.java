@@ -24,7 +24,7 @@ import zipkin2.Endpoint;
  * <p>The hint that we need to re-attach the headers handler on re-route came from looking at
  * {@code TracingHandler} in https://github.com/opentracing-contrib/java-vertx-web
  *
- * <h3>Why use a thread local for the http template when parsing {@linkplain HttpServerResponse}?</h3>
+ * <h3>Why use a thread local for the http route when parsing {@linkplain HttpServerResponse}?</h3>
  * <p>When parsing the response, we use a thread local to make the current route's path visible.
  * This is an alternative to wrapping {@linkplain HttpServerResponse} or declaring a custom type.
  * We don't wrap {@linkplain HttpServerResponse}, because this would lock the instrumentation to the
@@ -130,7 +130,7 @@ final class TracingRoutingContextHandler implements Handler<RoutingContext> {
       return request.headers().get(name);
     }
 
-    @Override public String template(HttpServerResponse response) {
+    @Override public String route(HttpServerResponse response) {
       return currentTemplate.get();
     }
 
